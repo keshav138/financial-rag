@@ -6,6 +6,14 @@ from app.rag.loader import load_chunks_from_bytes
 from app.rag.vectorstore import ingest_chunks, reset_database
 from app.rag.chain import query_rag
 
+from app.monitoring.metrics import(
+    setup_instrumentator,
+    RAG_LATENCY,
+    RAG_FAILED_REQUESTS,
+    RAG_REQUESTS_TOTAL,
+    DOCUMENTS_INGESTED
+)
+
 import time
 
 
@@ -14,6 +22,8 @@ app = FastAPI(
     description='RAG pipeline over SEC findings',
     version='1.0.0'
 )
+
+setup_instrumentator(app)
 
 # ----- Request/Response Model ----- #
 
@@ -28,6 +38,7 @@ class QueryResponse(BaseModel):
 class IngestResponse(BaseModel):
     message : str
     chunks_stored : int
+    
     
 # --- Endpoints -- #
 
@@ -49,6 +60,9 @@ async def ingest_document(file : UploadFile = File(...)):
         file_bytes = await file.read()
         chunks = load_chunks_from_bytes(file_bytes, file.filename)
         count = ingest_chunks(chunks)
+        
+        DOCUMENTS_INGESTED.inc(count)
+        
         return IngestResponse(
             message=f'Successfully ingested {file.filename}',
             chunks_stored = count
@@ -56,6 +70,7 @@ async def ingest_document(file : UploadFile = File(...)):
         
         
     except Exception as e:
+        RAG_FAILED_REQUESTS.inc()
         raise HTTPException(status_code=500, detail = str(e))
     
 
@@ -64,18 +79,23 @@ async def query_document(request : QueryRequest):
     if not  request.question.strip():
         return HTTPException(status_code=400, detail='Question cannot be empty.')
 
+    RAG_REQUESTS_TOTAL.inc()
+
     try:
         start = time.time()
         result = query_rag(request.question)
-        latency_ms = round((time.time() - start) * 1000, 2)
+        latency_ms = time.time() - start
+        
+        RAG_LATENCY.observe(latency_ms)
         
         return QueryResponse(
             answer = result['answer'],
             sources = result['sources'],
-            latency_ms = latency_ms
+            latency_ms = round(latency_ms * 1000, 2)
         )
         
     except Exception as e:
+        RAG_FAILED_REQUESTS.inc()
         raise HTTPException(status_code=500, detail=str(e))
     
     
