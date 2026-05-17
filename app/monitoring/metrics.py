@@ -34,7 +34,7 @@ def setup_instrumentator(app):
     Instrumentator(
         should_group_status_codes=True, # groups HTTP requests in the hundreds , 2XX, 3XX, 4XX, 5XX
         should_ignore_untemplated=True, # client hits a unknown endpoint, dont track that
-        should_respect_env_var=True, # 
+        should_respect_env_var=False, # Basically need a env variable saying that its ok to calculate metrics here
         should_instrument_requests_inprogress=True, # currently actively hanging requests
         excluded_handlers=['/metrics', '/health'] # ignore endpoints
     ).instrument(app).expose(app) # .instrument attaches middleware to track http requests, .expose creates a /metrics endpoint
