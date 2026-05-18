@@ -15,26 +15,25 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies and Test') {
-            agent{
-                docker{
+        stage('Install Dependencies & Test') {
+            agent {
+                docker {
                     image 'python:3.11.9-slim'
                     args '-v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
-
-            steps{
+            steps {
                 sh '''
                     pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
-                    pip install --quiet -r requirement.txt
+                    pip install --quiet -r requirements.txt
                     pip install --quiet pytest httpx
                     python -m pytest tests/test_api.py -v
                 '''
             }
         }
 
-        stage('Build Docker Image') {
-            agent any
+        stage('Build & Push Docker Image') {
+            agent any  
             steps {
                 sh """
                     docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
