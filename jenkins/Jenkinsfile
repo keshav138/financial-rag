@@ -1,21 +1,21 @@
-pipeline{
+pipeline {
     agent any
 
-    environment{
+    environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        IMAGE_NAME = 'keshavmaiya/financial-rag'
+        IMAGE_NAME = "your_dockerhub_username/financial-rag"
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
-    stages{
-        stage('Checkout'){
-            steps{
+    stages {
+        stage('Checkout') {
+            steps {
                 checkout scm
             }
         }
 
-        stage('Install Dependencies'){
-            steps{
+        stage('Install Dependencies') {
+            steps {
                 sh '''
                     python -m venv venv
                     . venv/bin/activate
@@ -26,46 +26,40 @@ pipeline{
             }
         }
 
-        stage('Run tests'){
-            steps{
+        stage('Run Tests') {
+            steps {
                 sh '''
                     . venv/bin/activate
-                    python -m pytest tests/test_api.py -v
+                    pytest tests/ -v
                 '''
             }
         }
 
-        stage('Build Docker Image'){
-            steps{
-                // Fixed: Use double quotes for variable expansion
+        stage('Build Docker Image') {
+            steps {
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
-        stage('Push Docker Image to DockerHUB'){
-            steps{
-                sh '''
-                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+        stage('Push to Docker Hub') {
+            steps {
+                sh """
+                    echo \$DOCKERHUB_CREDENTIALS_PSW | docker login -u \$DOCKERHUB_CREDENTIALS_USR --password-stdin
                     docker push ${IMAGE_NAME}:${IMAGE_TAG}
                     docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
                     docker push ${IMAGE_NAME}:latest
-                '''
+                    docker logout
+                """
             }
         }
     }
 
-    post{
-        always{
-            script {
-                sh 'docker logout || true'
-                sh 'docker system prune -f || true'
-            }
+    post {
+        success {
+            echo "Pipeline succeeded - image pushed as ${IMAGE_NAME}:${IMAGE_TAG}"
         }
-        success{
-            echo "Pipeline succeeded - image pushed to ${IMAGE_NAME}:${IMAGE_TAG}"
-        }
-        failure{
-            echo "Pipeline Failed"
+        failure {
+            echo "Pipeline failed"
         }
     }
 }
