@@ -25,3 +25,5 @@ Thumbs.db
 
 # Testing
 test_*.py
+
+.pytest_cache/

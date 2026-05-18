@@ -1,0 +1,13 @@
+venv/
+chroma_db/
+.env
+.git/
+__pycache__/
+*.pyc
+.pyo
+.python-version
+tests/
+docker/
+terraform/
+jenkins/
+*.md
