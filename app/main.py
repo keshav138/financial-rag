@@ -76,8 +76,8 @@ async def ingest_document(file : UploadFile = File(...)):
 
 @app.post('/query', response_model = QueryResponse)
 async def query_document(request : QueryRequest):
-    if not  request.question.strip():
-        return HTTPException(status_code=400, detail='Question cannot be empty.')
+    if not request.question.strip():
+        raise HTTPException(status_code=400, detail='Question cannot be empty.')
 
     RAG_REQUESTS_TOTAL.inc()
 
