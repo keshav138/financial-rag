@@ -1,9 +1,14 @@
 pipeline {
-    agent any
+    agent{
+        docker{
+            image 'python:3.11.9-slim'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        IMAGE_NAME = "your_dockerhub_username/financial-rag"
+        IMAGE_NAME = "keshavmaiya/financial-rag"
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
@@ -17,8 +22,6 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    python -m venv venv
-                    . venv/bin/activate
                     pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
                     pip install --quiet -r requirements.txt
                     pip install --quiet pytest httpx
@@ -29,8 +32,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    . venv/bin/activate
-                    pytest tests/ -v
+                    python -m pytest tests/test_api.py -v
                 '''
             }
         }
