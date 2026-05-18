@@ -1,10 +1,5 @@
 pipeline {
-    agent{
-        docker{
-            image 'python:3.11.9-slim'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent none
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
@@ -14,38 +9,35 @@ pipeline {
 
     stages {
         stage('Checkout') {
+            agent any
             steps {
                 checkout scm
             }
         }
 
-        stage('Install Dependencies') {
-            steps {
+        stage('Install Dependencies and Test') {
+            agent{
+                docker{
+                    image 'python:3.11.9-slim'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
+
+            steps{
                 sh '''
                     pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
-                    pip install --quiet -r requirements.txt
+                    pip install --quiet -r requirement.txt
                     pip install --quiet pytest httpx
-                '''
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                sh '''
                     python -m pytest tests/test_api.py -v
                 '''
             }
         }
 
         stage('Build Docker Image') {
-            steps {
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-            }
-        }
-
-        stage('Push to Docker Hub') {
+            agent any
             steps {
                 sh """
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                     echo \$DOCKERHUB_CREDENTIALS_PSW | docker login -u \$DOCKERHUB_CREDENTIALS_USR --password-stdin
                     docker push ${IMAGE_NAME}:${IMAGE_TAG}
                     docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
