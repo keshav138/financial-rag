@@ -44,14 +44,13 @@ pipeline{
         stage('Push Docker Image to DockerHUB'){
             steps{
                 sh '''
-                echo $DOCERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
                 docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                docker tag ${IMAGE_NAME}:{IMAGE_TAG} ${IMAGE_NAME}:latest
+                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
                 docker push ${IMAGE_NAME}:latest
                 '''
             }
         }
-
     }
 
     post{
@@ -64,5 +63,5 @@ pipeline{
         failure{
             echo "Pipeline Failed"
         }
-    }
+    }  
 }
