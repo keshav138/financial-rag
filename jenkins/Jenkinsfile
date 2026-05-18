@@ -29,25 +29,26 @@ pipeline{
         stage('Run tests'){
             steps{
                 sh '''
-                . venv/bin/activate
-                python -m pytest tests/test_api.py
+                    . venv/bin/activate
+                    python -m pytest tests/test_api.py -v
                 '''
             }
         }
 
         stage('Build Docker Image'){
             steps{
-                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+                // Fixed: Use double quotes for variable expansion
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
         stage('Push Docker Image to DockerHUB'){
             steps{
                 sh '''
-                echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
-                docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
-                docker push ${IMAGE_NAME}:latest
+                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                    docker push ${IMAGE_NAME}:latest
                 '''
             }
         }
@@ -55,7 +56,10 @@ pipeline{
 
     post{
         always{
-            sh "docker logout"
+            script {
+                sh 'docker logout || true'
+                sh 'docker system prune -f || true'
+            }
         }
         success{
             echo "Pipeline succeeded - image pushed to ${IMAGE_NAME}:${IMAGE_TAG}"
@@ -63,5 +67,5 @@ pipeline{
         failure{
             echo "Pipeline Failed"
         }
-    }  
+    }
 }
