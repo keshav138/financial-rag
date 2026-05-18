@@ -1,0 +1,67 @@
+pipeline{
+    agent any
+
+    environment{
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        IMAGE_NAME = 'keshavmaiya/financial-rag'
+        IMAGE_TAG = ${BUILD_NUMBER}
+    }
+
+    stages{
+        stage('Checkout'){
+            steps{
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies'){
+            steps{
+                sh '''
+                    python -m venv venv
+                    pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
+                    pip install --quiet -r requirements.txt
+                    pip install --quiet pytest httpx
+                '''
+            }
+        }
+
+        stage('Run tests'){
+            steps{
+                sh '''
+                . venv/bin/activate
+                python -m pytest tests/test_api.py
+                '''
+            }
+        }
+
+        stage('Build Docker Image'){
+            steps{
+                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+            }
+        }
+
+        stage('Push Docker Image to DockerHUB'){
+            steps{
+                sh '''
+                echo $DOCERHUB_CREDENTIALS_PWD | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                docker tag ${IMAGE_NAME}:{IMAGE_TAG} ${IMAGE_NAME}:latest
+                docker push ${IMAGE_NAME}:latest
+                '''
+            }
+        }
+
+    }
+
+    post{
+        always{
+            sh "docker logout"
+        }
+        success{
+            echo "Pipeline succeeded - image pushed to ${IMAGE_NAME}:${IAMGE_TAG}"
+        }
+        failure{
+            echo "Pipeline Failed"
+        }
+    }
+}

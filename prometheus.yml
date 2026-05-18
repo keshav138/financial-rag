@@ -1,0 +1,9 @@
+# this config file is for the actual prometheus software to scrape data off the app running on port 8000
+
+global:
+  scrape_interval: 15s # scrape the souce website for metrics evry 15scs
+
+scrape_configs:
+  - job_name: "financial-rag" # placeholder, helps find this certain app's metrics
+    static_configs: # hardcoding the target here
+      - targets: ["app:8000"]  # "app" is the docker-compose service name
